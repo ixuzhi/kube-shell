@@ -1,18 +1,14 @@
 package main
 
 import (
-	"os"
 	"encoding/json"
 	"io/ioutil"
 	//"fmt"
 
-	"github.com/spf13/pflag"
 	"github.com/spf13/cobra"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"         // kubectl auth providers.
-	_ "k8s.io/kubernetes/pkg/client/metrics/prometheus" // for client metric registration
-	"k8s.io/kubernetes/pkg/kubectl/cmd"
-	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
-	_ "k8s.io/kubernetes/pkg/version/prometheus" // for version metric registration
+	"github.com/spf13/pflag"
+	_ "k8s.io/client-go/plugin/pkg/client/auth" // kubectl auth providers.
+	"k8s.io/kubectl/pkg/cmd"
 )
 
 type Option struct {
@@ -21,21 +17,22 @@ type Option struct {
 }
 
 type Command struct {
-	Command string `json:"command"`
-	Help string    `json:"help"`
+	Command     string             `json:"command"`
+	Help        string             `json:"help"`
 	Subcommands map[string]Command `json:"subcommands"`
-	Args    []string `json:"args"`
-	Options    map[string]Option `json:"options"`
+	Args        []string           `json:"args"`
+	Options     map[string]Option  `json:"options"`
 }
 
 var (
-	kubectl_cmd = Command{}
+	kubectl_cmd    = Command{}
 	globalFlagsSet = false
 )
 
-func main()  {
-	cobraCmd := cmd.NewKubectlCommand(cmdutil.NewFactory(nil), os.Stdin, os.Stdout, os.Stderr)
-	buildCmdMap(&kubectl_cmd, cobraCmd)
+func main() {
+	command := cmd.NewDefaultKubectlCommand()
+	buildCmdMap(&kubectl_cmd, command)
+
 	cli := make(map[string]Command)
 	cli["kubectl"] = kubectl_cmd
 	b, err := json.Marshal(&cli)
@@ -53,9 +50,9 @@ func buildCmdMap(rootCmd *Command, cobraCmd *cobra.Command) {
 	rootCmd.Options = make(map[string]Option, 0)
 	rootCmd.Args = make([]string, 0)
 
-	for _, subCobraCmd := range cobraCmd.Commands(){
+	for _, subCobraCmd := range cobraCmd.Commands() {
 		subCmd := Command{}
-	    buildCmdMap(&subCmd, subCobraCmd)
+		buildCmdMap(&subCmd, subCobraCmd)
 		rootCmd.Subcommands[subCobraCmd.Name()] = subCmd
 	}
 
